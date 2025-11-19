@@ -1,0 +1,494 @@
+# Cursor Rules para Blog de Cocina con Next.js + NestJS + PostgreSQL
+
+## ⚠️ IMPORTANTE: Estilo de Comunicación y Respuestas
+
+**ESTE ES UN PROYECTO DE APRENDIZAJE**. El desarrollador tiene conocimiento básico de React y TypeScript, pero **NO conoce Prisma, NestJS ni la mayoría del stack**.
+
+### Cómo responder a preguntas y dudas:
+
+1. **SIEMPRE empezar con análisis del problema**:
+   - Explicar QUÉ está pasando
+   - Identificar las dependencias y relaciones
+   - Mapear el flujo de datos
+
+2. **Explicar cómo lo afrontaría un senior**:
+   - Qué herramientas/tecnologías usar (Prisma transactions, nested creates, etc.)
+   - Por qué elegir esa herramienta
+   - Cuándo usar cada patrón
+
+3. **Explicar el flujo paso a paso**:
+   - Qué hacer primero, segundo, tercero
+   - Qué datos necesitas en cada paso
+   - Qué IDs/relaciones necesitas antes de continuar
+
+4. **NO dar código a menos que lo pida explícitamente**:
+   - Si pregunta "cómo se hace", dar explicación conceptual
+   - Si pregunta "muéstrame el código", entonces sí dar código
+   - Si dice "no me des código", NO dar código
+
+5. **Contexto educativo**:
+   - Explicar POR QUÉ se hace así
+   - Mencionar alternativas y cuándo usar cada una
+   - Relacionar conceptos con lo que ya sabe (React/TypeScript)
+
+6. **Ser directo y conciso**:
+   - No dar listas incompletas (1. a, 2. b, 3. c, 4. e)
+   - No dar teoría sin aplicación práctica
+   - Ir al grano: problema → análisis → solución → flujo
+
+### Ejemplo de respuesta correcta:
+
+**MAL**: "Hay dos enfoques, nested creates o transacciones. Nested creates son mejores para..."
+
+**BIEN**: "El problema es que necesitas el ID de RecipeIngredient para crear RecipeStepIngredient, pero ese ID se genera al crearlo. Por eso necesitas: 1) Crear Recipe + RecipeIngredient primero, 2) Obtener los IDs, 3) Crear RecipeStep usando esos IDs. Usa `$transaction` de Prisma para hacerlo atómico."
+
+## Stack Tecnológico
+
+- **Frontend**: Next.js 14+ con TypeScript y Tailwind CSS
+- **Backend**: NestJS con TypeScript
+- **Base de datos**: PostgreSQL con Prisma ORM
+- **Contenedores**: Docker para la base de datos
+- **Autenticación**: JWT + Passport + NextAuth.js
+- **Validación**: class-validator + class-transformer para DTOs
+- **Testing**: Jest + Testing Library
+- **Package Manager**: pnpm para el backend, npm para el frontend
+
+## Estructura del Proyecto
+
+```
+/
+├── frontend/          # Next.js app (blog de cocina)
+├── backend-nest/      # NestJS API (recetas y contenido)
+├── shared/            # Tipos y utilidades compartidas
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+## Convenciones de Código
+
+### TypeScript
+
+- Usar tipos estrictos, evitar `any`
+- Preferir interfaces sobre types cuando sea posible
+- Usar enums para constantes relacionadas
+- Implementar error handling con try-catch
+- Usar generics cuando sea apropiado
+
+### Next.js (Frontend)
+
+- Usar App Router (app/ directory)
+- Implementar Server Components por defecto para páginas (home, categorías, recetas)
+- Usar Client Components solo cuando sea necesario (interacciones de usuario: favoritos, comentarios)
+- Implementar `loading.tsx` y `error.tsx` para home, categorías y detalle de receta
+- Configurar middleware para autenticación en páginas privadas (dashboard de autor, recetas guardadas)
+- Preferir Server Actions sobre API routes para publicar/editar recetas y gestionar favoritos
+
+### NestJS (Backend)
+
+#### Arquitectura y Módulos
+
+- Organizar código por dominios de contenido (recetas, categorías, autores, comentarios)
+- Cada módulo debe tener: controller, service, module, DTOs y entities
+- Usar inyección de dependencias para todos los servicios
+- Implementar módulos compartidos para funcionalidad común
+- Usar módulos globales solo cuando sea absolutamente necesario
+
+#### Decoradores y Metadata
+
+- Usar decoradores de NestJS apropiadamente (@Controller, @Injectable, @Module)
+- Implementar decoradores personalizados para lógica repetitiva
+- Usar metadata reflection solo cuando sea necesario
+- Documentar APIs con decoradores de Swagger (@ApiTags, @ApiResponse)
+
+#### Controllers
+
+- Mantener controllers delgados (delegar lógica a services)
+- Usar decoradores HTTP apropiados (@Get para listados de recetas, @Post/@Patch para publicar/editar)
+- Implementar validación con DTOs y `ValidationPipe` (recetas, comentarios, perfiles)
+- Usar `@Param`, `@Body`, `@Query` apropiadamente
+- Implementar serialización con interceptores
+
+#### Services
+
+- Implementar lógica de negocio en services (formateo de recetas, ordenado por popularidad/fecha)
+- Usar async/await para operaciones asíncronas
+- Inyectar dependencias en el constructor
+- Implementar interfaces para services complejos
+- Usar transactions de Prisma cuando sea necesario (publicar receta con ingredientes y pasos)
+
+#### DTOs (Data Transfer Objects)
+
+- Crear DTOs para request y response
+- Usar class-validator para validaciones
+- Implementar class-transformer para transformaciones
+- Usar PartialType, PickType, OmitType para reutilización
+- Documentar DTOs con decoradores de Swagger
+
+#### Guards y Middleware
+
+- Implementar Guards para autenticación y autorización
+- Usar Guards a nivel de controller o método
+- Implementar middleware para logging y transformación de requests
+- Usar Interceptors para transformar responses
+- Implementar Pipes personalizados para validaciones complejas
+
+#### Exception Handling
+
+- Usar exception filters para manejo centralizado de errores
+- Lanzar HttpException apropiadas
+- Crear excepciones personalizadas cuando sea necesario
+- Implementar logging de errores
+- Retornar respuestas consistentes
+
+#### Validación y Pipes
+
+- Usar ValidationPipe global con whitelist: true
+- Implementar ParseIntPipe, ParseUUIDPipe para params
+- Crear pipes personalizados para validaciones complejas
+- Usar transform: true para transformar DTOs
+
+### Prisma
+
+- Usar migrations para cambios de schema
+- Implementar soft deletes cuando sea necesario
+- Usar transactions para operaciones complejas
+- Crear índices para consultas frecuentes
+- Usar Prisma Client con PrismaService en NestJS
+- Implementar Prisma Module como módulo global
+
+## Patrones de Arquitectura
+
+### Frontend
+
+- **Componentes**: Reutilizables, con props tipadas
+- **Hooks**: Custom hooks para lógica compartida (filtrado, estados de favoritos)
+- **Estado**: Zustand para estado global (usuario, recetas guardadas)
+- **Formularios**: React Hook Form + Zod (crear/editar recetas, comentarios)
+- **Routing**: Next.js App Router (home, categorías, receta, dashboard)
+- **Styling**: Tailwind CSS con componentes y diseño responsive
+
+### Backend (NestJS)
+
+- **Módulos**: Organización por dominio/funcionalidad
+- **Controllers**: Manejo de HTTP requests/responses
+- **Services**: Lógica de negocio e interacción con datos
+- **Repositories**: Opcional - abstracción de acceso a datos
+- **DTOs**: Validación y transferencia de datos
+- **Entities**: Representación de modelos de Prisma
+- **Guards**: Autenticación y autorización
+- **Interceptors**: Transformación de requests/responses
+- **Pipes**: Validación y transformación de datos
+- **Filters**: Manejo de excepciones
+- **Middleware**: Procesamiento de requests
+
+## Base de Datos
+
+### Entidades Principales
+
+- Users (autenticación y perfiles de autores)
+- Recipes (contenido principal)
+- RecipeSteps (pasos detallados)
+- Ingredients (ingredientes por receta)
+- Categories (organización temática)
+- Tags (búsqueda flexible)
+- Comments (retroalimentación de usuarios)
+- Favorites (recetas guardadas)
+- Ratings (calificación opcional)
+
+### Relaciones
+
+- User 1:N Recipes
+- Recipe 1:N RecipeSteps
+- Recipe 1:N Ingredients
+- Category 1:N Recipes
+- Recipe N:M Tags
+- User 1:N Comments
+- Recipe 1:N Comments
+- User N:M Recipes (Favorites)
+- Recipe 1:N Ratings
+
+## Seguridad
+
+### Autenticación
+
+- JWT tokens con refresh tokens usando Passport
+- Guards de autenticación (@UseGuards(JwtAuthGuard))
+- Estrategias de Passport (Local, JWT)
+- Protección de rutas en Next.js
+- Hash de contraseñas con bcrypt
+
+### Autorización
+
+- Guards de roles (@UseGuards(RolesGuard))
+- Decorador personalizado @Roles()
+- RBAC (Role-Based Access Control)
+- Verificación de permisos en Guards
+
+### Validación
+
+- Validar todos los inputs con class-validator
+- Sanitizar datos de usuario
+- Implementar rate limiting con @nestjs/throttler
+- Usar HTTPS en producción
+- Implementar CORS apropiadamente
+- Usar helmet para headers de seguridad
+
+## Performance
+
+### Frontend
+
+- Implementar lazy loading
+- Usar Image optimization de Next.js
+- Implementar caching apropiado
+- Optimizar bundle size y assets (imágenes de recetas)
+
+### Backend
+
+- Implementar caching con @nestjs/cache-manager
+- Usar Redis para caching distribuido
+- Optimizar queries de Prisma
+- Usar connection pooling
+- Implementar paginación
+- Usar interceptores para caching de responses
+- Implementar compression
+
+## Testing
+
+### Frontend
+
+- Unit tests con Jest
+- Component tests con Testing Library
+- E2E tests con Playwright
+- Mock de APIs
+
+### Backend
+
+- Unit tests para services (con mocks)
+- Integration tests para controllers
+- E2E tests para flujos completos (listar recetas, publicar, comentar)
+- Test database separada
+- Mock de PrismaService
+- Usar TestingModule de NestJS
+
+## Docker
+
+### Configuración
+
+- PostgreSQL en contenedor
+- Variables de entorno
+- Volumes para persistencia
+- Health checks
+- Opcional: contenedor para NestJS
+
+## Convenciones de Git
+
+### Commits
+
+- Usar conventional commits
+- Prefijos: feat, fix, docs, style, refactor, test, chore
+- Ejemplo: `feat: add user authentication`
+
+### Branches
+
+- main: producción
+- develop: desarrollo
+- feature/\*: nuevas funcionalidades
+- fix/\*: correcciones
+- hotfix/\*: fixes urgentes
+
+## Estructura de Archivos
+
+### Frontend
+
+```
+frontend/
+├── app/
+│   ├── (public)/
+│   │   ├── page.tsx               # Home con recetas destacadas y recientes
+│   │   ├── categories/            # Listado y detalle de categorías
+│   │   └── recipes/               # Detalle de receta con pasos, comentarios
+│   ├── (auth)/                    # Login/Register si aplica
+│   ├── (dashboard)/               # Panel del autor: recetas propias, borradores
+│   ├── api/                       # Server actions cuando se requiera
+│   ├── globals.css
+│   └── layout.tsx
+├── components/
+│   ├── ui/
+│   ├── recipes/
+│   ├── layout/
+│   └── marketing/
+├── hooks/                         # useRecipeFilters, useFavoriteRecipe, etc.
+├── lib/                           # utils de fetch, formateadores
+├── types/                         # Tipos compartidos de frontend
+└── utils/                         # Helpers específicos
+```
+
+### Backend (NestJS)
+
+```
+backend/
+├── src/
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── users/
+│   │   ├── recipes/
+│   │   ├── categories/
+│   │   ├── tags/
+│   │   ├── comments/
+│   │   ├── favorites/
+│   │   └── uploads/               # Manejo de imágenes de recetas
+│   ├── common/
+│   │   ├── decorators/
+│   │   ├── filters/
+│   │   ├── guards/
+│   │   ├── interceptors/
+│   │   ├── pipes/
+│   │   └── dto/
+│   ├── config/
+│   ├── database/
+│   │   ├── prisma.service.ts
+│   │   └── prisma.module.ts
+│   ├── app.module.ts
+│   └── main.ts
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── test/
+└── nest-cli.json
+```
+
+## Variables de Entorno
+
+### Frontend
+
+- NEXT_PUBLIC_API_URL
+- NEXT_PUBLIC_APP_URL
+- NEXTAUTH_SECRET
+- NEXTAUTH_URL
+
+### Backend
+
+- DATABASE_URL
+- JWT_SECRET
+- JWT_REFRESH_SECRET
+- JWT_EXPIRATION
+- PORT
+- NODE_ENV
+- CORS_ORIGIN
+- STORAGE_BUCKET (si se usa almacenamiento externo de imágenes)
+- STORAGE_BASE_URL
+
+## Scripts Útiles
+
+### Desarrollo
+
+- `npm run dev` - Frontend (Next.js)
+- `pnpm run start:dev` - Backend (NestJS watch mode)
+- `docker-compose up` - Base de datos
+
+### Producción
+
+- `npm run build` - Build frontend
+- `pnpm run build` - Build backend
+- `pnpm run start:prod` - Iniciar NestJS en producción
+- `pnpm prisma migrate deploy` - Migrar base de datos
+
+### NestJS CLI
+
+- `pnpm nest g module <name>` - Generar módulo
+- `pnpm nest g controller <name>` - Generar controller
+- `pnpm nest g service <name>` - Generar service
+- `pnpm nest g resource <name>` - Generar recurso completo (CRUD)
+- `pnpm nest g guard <name>` - Generar guard
+- `pnpm nest g interceptor <name>` - Generar interceptor
+- `pnpm nest g pipe <name>` - Generar pipe
+- `pnpm nest g filter <name>` - Generar exception filter
+
+## Mejores Prácticas
+
+### Código
+
+- Escribir código autodocumentado
+- Usar nombres descriptivos
+- Evitar funciones muy largas
+- Implementar error handling
+- Escribir tests
+- Usar inyección de dependencias
+- Seguir principios SOLID
+
+### NestJS Específico
+
+- Un módulo por feature/dominio
+- Services con responsabilidad única
+- Controllers delgados
+- DTOs para validación
+- Guards para autenticación/autorización
+- Interceptors para transformación
+- Pipes para validación
+- Filters para manejo de errores
+- Documentar con Swagger
+
+### Performance
+
+- Optimizar imágenes
+- Implementar caching
+- Lazy loading de módulos
+- Bundle optimization
+- Usar interceptores de cache
+- Optimizar queries de BD
+
+### Seguridad
+
+- Validar inputs con DTOs
+- Sanitizar datos
+- Implementar rate limiting
+- Usar HTTPS
+- Proteger rutas sensibles con Guards
+- Implementar CORS apropiadamente
+- Usar helmet
+- No exponer stack traces en producción
+
+## Comandos Útiles
+
+### Prisma
+
+- `pnpm prisma generate` - Generar cliente
+- `pnpm prisma db push` - Sincronizar schema
+- `pnpm prisma migrate dev` - Crear migración
+- `pnpm prisma studio` - Abrir Prisma Studio
+- `pnpm prisma migrate deploy` - Deploy de migraciones en producción
+
+### Docker
+
+- `docker-compose up -d` - Iniciar servicios
+- `docker-compose down` - Detener servicios
+- `docker-compose logs` - Ver logs
+
+### NestJS
+
+- `pnpm run start` - Iniciar aplicación
+- `pnpm run start:dev` - Iniciar en modo desarrollo
+- `pnpm run start:debug` - Iniciar en modo debug
+- `pnpm run test` - Ejecutar tests
+- `pnpm run test:watch` - Tests en watch mode
+- `pnpm run test:cov` - Tests con coverage
+- `pnpm run test:e2e` - Tests E2E
+
+## Notas Importantes
+
+1. **Siempre** validar datos de entrada con DTOs
+2. **Nunca** exponer información sensible
+3. **Implementar** logging apropiado con Logger de NestJS
+4. **Usar** tipos estrictos en TypeScript
+5. **Escribir** tests para funcionalidad crítica
+6. **Optimizar** queries de base de datos
+7. **Implementar** manejo de errores con Filters
+8. **Usar** convenciones de naming consistentes
+9. **Organizar** código por módulos
+10. **Documentar** APIs con Swagger/OpenAPI
+11. **Usar** inyección de dependencias
+12. **Implementar** Guards para seguridad
+13. **Crear** DTOs para todas las operaciones
+14. **Usar** interceptores para transformaciones
+15. **Implementar** logging y monitoring

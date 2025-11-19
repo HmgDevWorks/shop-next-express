@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: shop_postgres
+    environment:
+      POSTGRES_DB: shopdb
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - shop_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d shopdb"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build: 
+      context: ./backend-nest
+      dockerfile: Dockerfile
+    container_name: shop_backend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend-nest:/app
+      - /app/node_modules
+    env_file:
+      - ./backend-nest/.env
+      # - DATABASE_URL=postgresql://username:password@postgres:5432/shopdb?schema=public
+      # - PORT=3001
+      # - NODE_ENV=development
+      # - JWT_SECRET=your-super-secret-jwt-key
+      # - JWT_EXPIRES_IN=24h
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run start:dev
+    networks:
+      - shop_network
+
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shop_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+    networks:
+      - shop_network
+
+volumes:
+  postgres_data:
+
+networks:
+  shop_network:
+    driver: bridge
