@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  recipes   Recipe[]
+  reviews   Review[]
+  tokens    Token[]
+  books     Book[]
+  bookmarks Bookmark[]
+}
+
+enum Role {
+  ADMIN
+  USER
+  MODERATOR
+  CHEF
+}
+
+model Ingredient {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipeIngredients RecipeIngredient[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  recipes CategoryRecipe[]
+}
+
+model Recipe {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  name        String
+  description String?
+  imageUrl    String?
+  videoUrl    String?
+  prepTime    Int?
+  cookingTime Int?
+  servings    Int?
+  difficulty  Difficulty @default(EASY) // EASY, MEDIUM, HARD
+  userId      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt // Agregar updatedAt
+
+  // Relaciones
+  user         User               @relation(fields: [userId], references: [id])
+  categories   CategoryRecipe[]
+  ingredients  RecipeIngredient[]
+  reviews      Review[]
+  bookmarks    Bookmark[]
+  instructions RecipeStep[]
+}
+
+model RecipeStep {
+  id          String   @id @default(uuid())
+  recipeId    String
+  instruction String
+  step        Int
+  imageUrl    String?
+  videoUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  recipe                Recipe                 @relation(fields: [recipeId], references: [id])
+  recipeStepIngredients RecipeStepIngredient[]
+}
+
+model RecipeIngredient {
+  id           String   @id @default(uuid())
+  recipeId     String
+  ingredientId String
+  quantity     Int
+  unit         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relaciones
+  recipe                Recipe                 @relation(fields: [recipeId], references: [id])
+  ingredient            Ingredient             @relation(fields: [ingredientId], references: [id])
+  recipeStepIngredients RecipeStepIngredient[]
+
+  @@unique([recipeId, ingredientId])
+}
+
+model RecipeStepIngredient {
+  id                 String   @id @default(uuid())
+  recipeStepId       String
+  recipeIngredientId String
+  quantity           Int
+  unit               String
+  observation        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relaciones
+  recipeStep       RecipeStep       @relation(fields: [recipeStepId], references: [id])
+  recipeIngredient RecipeIngredient @relation(fields: [recipeIngredientId], references: [id])
+
+  @@unique([recipeStepId, recipeIngredientId])
+}
+
+model CategoryRecipe {
+  id         String   @id @default(uuid())
+  categoryId String
+  recipeId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relaciones
+  category Category @relation(fields: [categoryId], references: [id])
+  recipe   Recipe   @relation(fields: [recipeId], references: [id])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  recipeId  String
+  rating    Int      @db.SmallInt // 1-5 estrellas
+  comment   String?
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user   User   @relation(fields: [userId], references: [id])
+  recipe Recipe @relation(fields: [recipeId], references: [id])
+}
+
+model Book {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  imageUrl    String?
+  color       String?
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  user      User       @relation(fields: [userId], references: [id])
+  bookmarks Bookmark[]
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  user   User   @relation(fields: [userId], references: [id])
+  recipe Recipe @relation(fields: [recipeId], references: [id])
+  book   Book   @relation(fields: [bookId], references: [id])
+
+  @@unique([bookId, recipeId])
+}
+
+model Token {
+  id        String    @id @default(uuid())
+  userId    String
+  type      TokenType
+  token     String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([token, type])
+  @@index([userId, type])
+}
+
+enum TokenType {
+  REFRESH
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}

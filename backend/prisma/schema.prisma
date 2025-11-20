@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   email     String   @unique
   name      String?
   password  String
@@ -28,7 +28,7 @@ model User {
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
   price       Decimal  @db.Decimal(10, 2) // 10 dígitos, 2 decimales
@@ -45,7 +45,7 @@ model Product {
 }
 
 model Category {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   name      String   @unique
   createdAt DateTime @default(now())
 
@@ -54,7 +54,7 @@ model Category {
 }
 
 model Order {
-  id        String      @id @default(cuid())
+  id        String      @id @default(uuid())
   userId    String
   status    OrderStatus @default(PENDING)
   total     Decimal     @db.Decimal(10, 2)
@@ -67,7 +67,7 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
+  id        String  @id @default(uuid())
   orderId   String
   productId String
   quantity  Int
@@ -79,7 +79,7 @@ model OrderItem {
 }
 
 model Review {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   userId    String
   productId String
   rating    Int      @db.SmallInt // 1-5 estrellas
@@ -104,7 +104,7 @@ enum OrderStatus {
 
 // Agregar modelo Token para JWT
 model Token {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   userId    String   @unique
   token     String   @unique
   expiresAt DateTime
